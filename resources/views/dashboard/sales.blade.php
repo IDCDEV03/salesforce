@@ -1,6 +1,40 @@
+@php
+    // ดักจับและคำนวณตัวแปรพื้นฐานป้องกัน Error (ดึงเฉพาะข้อมูลของตัวเอง)
+    $userId = auth()->id();
+    $selectedMonth = request('fiscal_month', date('m'));
+    $selectedYear = request('fiscal_year', date('Y'));
+    $availableYears = range(date('Y') - 2, date('Y') + 1);
+
+    $months = [
+        '01' => 'มกราคม', '02' => 'กุมภาพันธ์', '03' => 'มีนาคม', 
+        '04' => 'เมษายน', '05' => 'พฤษภาคม', '06' => 'มิถุนายน', 
+        '07' => 'กรกฎาคม', '08' => 'สิงหาคม', '09' => 'กันยายน', 
+        '10' => 'ตุลาคม', '11' => 'พฤศจิกายน', '12' => 'ธันวาคม'
+    ];
+
+    if (!isset($totalClosed)) {
+        $totalClosed = \App\Models\SalesDeal::where('user_id', $userId)->where('status', 'Closed Sale')->get()->sum(function($deal) {
+            return $deal->total_amount ?? $deal->total ?? ($deal->price * ($deal->quantity ?? 1)) ?? 0;
+        });
+        $totalNet = $totalClosed / 1.07;
+        $totalVat = $totalClosed - $totalNet;
+    }
+    if (!isset($totalFollowing)) {
+        $totalFollowing = \App\Models\SalesDeal::where('user_id', $userId)->where('status', 'Following')->get()->sum(function($deal) {
+            return $deal->total_amount ?? $deal->total ?? ($deal->price * ($deal->quantity ?? 1)) ?? 0;
+        });
+    }
+    if (!isset($totalForecast)) {
+        $totalForecast = \App\Models\SalesDeal::where('user_id', $userId)->where('status', 'Forecast')->get()->sum(function($deal) {
+            return $deal->total_amount ?? $deal->total ?? ($deal->price * ($deal->quantity ?? 1)) ?? 0;
+        });
+    }
+    if (!isset($chartData)) $chartData = array_fill(0, 12, 0); // Fallback สำหรับกราฟรายเดือน
+@endphp
+
 @extends('layouts.app')
 
-@section('page_title', 'แดชบอร์ดภาพรวมฝ่ายขาย')
+@section('page_title', 'แดชบอร์ดข้อมูลของฉัน')
 
 @section('content')
 <style>
@@ -37,48 +71,6 @@
         padding: 4px 8px !important;
         font-size: 0.875rem !important;
     }
-
-    /* เพิ่มการตกแต่ง UI สำหรับ Select2 Multiple Select ให้เข้ากับดีไซน์เดิม */
-    .select2-container--default .select2-selection--multiple {
-        background-color: #ffffff !important;
-        border: 1px solid #d1d5db !important;
-        border-radius: 0.375rem !important;
-        min-height: 32px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        padding-left: 4px !important;
-        padding-right: 4px !important;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
-        color: #334155 !important;
-        font-size: 0.875rem !important;
-        font-weight: 600 !important;
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 4px !important;
-        padding: 2px 0 !important;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice {
-        background-color: #f1f5f9 !important;
-        border: 1px solid #cbd5e1 !important;
-        color: #334155 !important;
-        border-radius: 0.25rem !important;
-        padding: 2px 6px !important;
-        font-size: 0.75rem !important;
-        margin: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-        color: #ef4444 !important;
-        margin-right: 4px !important;
-        border: none !important;
-        background: transparent !important;
-    }
-    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
-        background: transparent !important;
-        color: #b91c1c !important;
-    }
 </style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -89,45 +81,24 @@
     
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h3 class="text-lg font-bold text-gray-800">สวัสดีทีมฝ่ายขาย ยินดีต้อนรับสู่ระบบสรุปยอดเงิน</h3>
-            <p class="text-gray-500 text-sm mt-1">นี่คือภาพรวมข้อมูลยอดขายและสถานะดีลงานทั้งหมดที่บันทึกอยู่ในระบบปัจจุบัน</p>
+            <h3 class="text-lg font-bold text-gray-800">แดชบอร์ดภาพรวม (เฉพาะของฉัน)</h3>
+            <p class="text-gray-500 text-sm mt-1">สวัสดีคุณ {{ auth()->user()->name }} นี่คือภาพรวมข้อมูลยอดขายและสถานะดีลงานของคุณ</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <form action="{{ url()->current() }}" method="GET" id="fiscalYearForm" class="flex flex-wrap items-center gap-2 bg-slate-50 border border-gray-200 px-3 py-1.5 rounded-lg shadow-2xs">
                 
-                @if(request()->has('sales_person_ids'))
-                    @foreach(request('sales_person_ids') as $m_sp)
-                        <input type="hidden" name="sales_person_ids[]" value="{{ $m_sp }}">
-                    @endforeach
-                @endif
-                @if(request()->has('table_status'))
-                    <input type="hidden" name="table_status" value="{{ request('table_status') }}">
-                @endif
-
                 <label for="sales_person_id" class="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1">
                     👤 พนักงาน:
                 </label>
-                <select name="sales_person_id" id="sales_person_id" class="bg-white rounded-md border border-gray-300 text-sm font-semibold text-slate-700 px-2.5 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                    <option value="all" {{ (!isset($selectedSalesPerson) || empty($selectedSalesPerson) || (is_array($selectedSalesPerson) ? in_array('all', $selectedSalesPerson) : $selectedSalesPerson == 'all')) ? 'selected' : '' }}>👥 พนักงานทุกคน (ภาพรวม)</option>
-                    @foreach($salesPersons as $person)
-                        <option value="{{ $person->id }}" {{ (isset($selectedSalesPerson) && (is_array($selectedSalesPerson) ? in_array($person->id, $selectedSalesPerson) : $selectedSalesPerson == $person->id)) ? 'selected' : '' }}>
-                            {{ $person->name }}
-                        </option>
-                    @endforeach
+                <select id="sales_person_id" class="bg-slate-100 rounded-md border border-gray-300 text-sm font-semibold text-slate-500 px-2.5 py-1 focus:outline-none cursor-not-allowed" disabled>
+                    <option value="{{ auth()->id() }}" selected>{{ auth()->user()->name }}</option>
                 </select>
+                <input type="hidden" name="sales_person_id" value="{{ auth()->id() }}">
 
                 <label for="fiscal_year" class="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1 ml-2">
                     📅 ช่วงเวลา:
                 </label>
 
-                @php
-                    $months = [
-                        '01' => 'มกราคม', '02' => 'กุมภาพันธ์', '03' => 'มีนาคม', 
-                        '04' => 'เมษายน', '05' => 'พฤษภาคม', '06' => 'มิถุนายน', 
-                        '07' => 'กรกฎาคม', '08' => 'สิงหาคม', '09' => 'กันยายน', 
-                        '10' => 'ตุลาคม', '11' => 'พฤศจิกายน', '12' => 'ธันวาคม'
-                    ];
-                @endphp
                 <select name="fiscal_month" id="fiscal_month" onchange="document.getElementById('fiscalYearForm').submit();" class="bg-white rounded-md border border-gray-300 text-sm font-semibold text-slate-700 px-2.5 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer">
                     @foreach($months as $key => $name)
                         <option value="{{ $key }}" {{ (isset($selectedMonth) && $selectedMonth == $key) ? 'selected' : '' }}>
@@ -144,8 +115,8 @@
                     @endforeach
                 </select>
 
-                @if((isset($selectedSalesPerson) && !empty($selectedSalesPerson) && (is_array($selectedSalesPerson) ? !in_array('all', $selectedSalesPerson) : $selectedSalesPerson !== 'all')) || $selectedMonth != date('m') || $selectedYear != date('Y'))
-                    <a href="{{ route('dashboard') }}" class="inline-flex items-center ml-1 px-2.5 py-1 border border-gray-300 shadow-2xs text-xs font-bold rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                @if($selectedMonth != date('m') || $selectedYear != date('Y'))
+                    <a href="{{ route('dashboard.sales') }}" class="inline-flex items-center ml-1 px-2.5 py-1 border border-gray-300 shadow-2xs text-xs font-bold rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                         <i class="fas fa-undo mr-1 text-gray-400"></i> ล้างค่า
                     </a>
                 @endif
@@ -168,11 +139,11 @@
             <div class="bg-slate-50/70 border-t border-gray-100 px-4 py-2.5 space-y-1 text-xs">
                 <div class="flex justify-between text-slate-500">
                     <span>ยอดก่อนภาษี (Net Amount):</span>
-                    <span class="font-mono font-medium">฿{{ number_format($totalNet, 2) }}</span>
+                    <span class="font-mono font-medium">฿{{ number_format($totalNet ?? 0, 2) }}</span>
                 </div>
                 <div class="flex justify-between text-slate-500">
                     <span>ภาษีมูลค่าเพิ่ม (VAT 7%):</span>
-                    <span class="font-mono font-medium">฿{{ number_format($totalVat, 2) }}</span>
+                    <span class="font-mono font-medium">฿{{ number_format($totalVat ?? 0, 2) }}</span>
                 </div>
                 <div class="flex justify-between text-slate-800 font-bold pt-0.5 border-t border-dashed border-gray-200">
                     <span>ยอดรวมสุทธิ (Gross Amount):</span>
@@ -244,113 +215,8 @@
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between border-b border-gray-100 pb-4 mb-4 gap-4">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h4 class="font-bold text-gray-700">
-                    <i class="fa-solid fa-trophy text-yellow-500 mr-2"></i> 
-                    เปรียบเทียบยอดขายรายบุคคลจำแนกตามคอร์สเรียน (ตามเงื่อนไขที่เลือก)
-                </h4>
-                <span class="text-xs bg-yellow-50 text-yellow-600 border border-yellow-100 px-2 py-1 rounded font-medium self-start sm:self-auto">
-                    ประจำเดือน {{ $months[$selectedMonth ?? date('m')] }} ปี พ.ศ. {{ $selectedYear + 543 }}
-                </span>
-            </div>
-            
-            <form action="{{ url()->current() }}" method="GET" id="matrixFilterForm" class="flex flex-col md:flex-row items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-gray-200">
-                <input type="hidden" name="sales_person_id" value="{{ request('sales_person_id', 'all') }}">
-                <input type="hidden" name="fiscal_month" value="{{ $selectedMonth }}">
-                <input type="hidden" name="fiscal_year" value="{{ $selectedYear }}">
-
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <label for="matrix_sales_persons" class="text-xs font-bold text-slate-600 whitespace-nowrap">👤 เลือกพนักงาน:</label>
-                    <div class="flex-1 md:w-[220px]">
-                        <select name="sales_person_ids[]" id="matrix_sales_persons" multiple="multiple" class="w-full">
-                            @foreach($salesPersons as $person)
-                                <option value="{{ $person->id }}" {{ (request()->has('sales_person_ids') && in_array($person->id, request('sales_person_ids'))) ? 'selected' : '' }}>
-                                    {{ $person->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
-                    <label for="matrix_status" class="text-xs font-bold text-slate-600 whitespace-nowrap">📌 สถานะ:</label>
-                    <select name="table_status" id="matrix_status" onchange="document.getElementById('matrixFilterForm').submit();" class="flex-1 md:w-auto bg-white rounded-md border border-gray-300 text-xs font-semibold text-slate-700 px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer h-[32px]">
-                        <option value="closed" {{ request('table_status', 'closed') == 'closed' ? 'selected' : '' }}>🟢 ปิดการขายแล้ว (Closed Sale)</option>
-                        <option value="following" {{ request('table_status') == 'following' ? 'selected' : '' }}>🔵 กำลังติดตาม (Following)</option>
-                        <option value="forecast" {{ request('table_status') == 'forecast' ? 'selected' : '' }}>🟡 ประมาณการยอด (Forecast)</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        
-        @php
-            if(!isset($matrixCourses) || !isset($matrixData)) {
-                $matrixCourses = ['ADR', 'ALT', 'Basic CPR', 'Safety Officer'];
-                $matrixData = [
-                    (object)['name' => 'นาย ก. (พนักงานตัวอย่าง 1)', 'sales' => ['ADR' => 500, 'ALT' => 650, 'Basic CPR' => 0, 'Safety Officer' => 1200]],
-                    (object)['name' => 'นาย ข. (พนักงานตัวอย่าง 2)', 'sales' => ['ADR' => 505, 'ALT' => 150, 'Basic CPR' => 300, 'Safety Officer' => 0]],
-                    (object)['name' => 'นาย ค. (พนักงานตัวอย่าง 3)', 'sales' => ['ADR' => 0, 'ALT' => 800, 'Basic CPR' => 50, 'Safety Officer' => 100]],
-                ];
-            }
-        @endphp
-
-        <div class="overflow-x-auto rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th scope="col" class="sticky left-0 bg-slate-50 px-4 py-3 text-left font-bold text-slate-700 border-r border-gray-200 shadow-[1px_0_0_0_#e5e7eb] z-10">
-                            รายชื่อพนักงานขาย
-                        </th>
-                        @foreach($matrixCourses as $course)
-                            <th scope="col" class="px-4 py-3 text-right font-bold text-slate-700 whitespace-nowrap">
-                                {{ $course }}
-                            </th>
-                        @endforeach
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    @forelse($matrixData as $row)
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="sticky left-0 bg-white hover:bg-slate-50 px-4 py-3 font-medium text-slate-800 border-r border-gray-200 shadow-[1px_0_0_0_#e5e7eb] whitespace-nowrap z-10">
-                                {{ $row->name }}
-                            </td>
-                            @foreach($matrixCourses as $course)
-                                @php
-                                    $amount = $row->sales[$course] ?? 0;
-                                    
-                                    // Heatmap: ปรับสีตัวอักษรและพื้นหลังตามความสูงของยอดขาย
-                                    $bgClass = '';
-                                    $textClass = 'text-slate-400'; // ถ้าไม่มียอดให้สีจางๆ
-                                    
-                                    if ($amount > 500) {
-                                        $bgClass = 'bg-emerald-50';
-                                        $textClass = 'text-emerald-700 font-bold';
-                                    } elseif ($amount > 0) {
-                                        $bgClass = '';
-                                        $textClass = 'text-slate-700 font-medium';
-                                    }
-                                @endphp
-                                <td class="px-4 py-3 text-right {{ $bgClass }} {{ $textClass }} whitespace-nowrap">
-                                    {{ $amount > 0 ? '฿'.number_format($amount, 2) : '-' }}
-                                </td>
-                            @endforeach
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ count($matrixCourses) + 1 }}" class="px-4 py-6 text-center text-gray-500">
-                                ยังไม่มีข้อมูลการขายในเงื่อนไขที่ท่านเลือก
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
-            <h4 class="font-bold text-gray-700"><i class="fa-solid fa-graduation-cap text-indigo-400 mr-2"></i> สรุปรายได้แยกตามคอร์สเรียน (Master Data)</h4>
+            <h4 class="font-bold text-gray-700"><i class="fa-solid fa-graduation-cap text-indigo-400 mr-2"></i> สรุปรายได้แยกตามคอร์สเรียน (เฉพาะของฉัน)</h4>
             <span class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-1 rounded font-medium">
                 ประจำเดือน {{ $months[$selectedMonth ?? date('m')] }} ปี พ.ศ. {{ $selectedYear + 543 }}
             </span>
@@ -363,7 +229,7 @@
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
             <h4 class="font-bold text-gray-700"><i class="fa-solid fa-chart-bar text-slate-400 mr-2"></i> สรุปผลยอดขายภาพรวมแต่ละเดือน (ปีนี้)</h4>
-            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">อัปเดตเรียลไทม์ (ปี พ.ศ. {{ $selectedYear + 543 }})</span>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">ปี พ.ศ. {{ $selectedYear + 543 }}</span>
         </div>
         <div class="relative w-full style-chart" style="height: 320px;">
             <canvas id="monthlySalesChart"></canvas>
@@ -376,25 +242,6 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         
-        // 🛠 เปิดใช้งานระบบค้นหารายชื่อพนักงานขายใน Dropdown ด้วย Select2 แบบ Single Select ตามเงื่อนไขใหม่
-        if (typeof jQuery !== 'undefined' && $.fn.select2) {
-            $('#sales_person_id').select2({
-                placeholder: "👥 ค้นหารายชื่อพนักงาน",
-                allowClear: false
-            }).on('change', function() {
-                // ส่งข้อมูลฟอร์มทันทีเมื่อมีการเปลี่ยนแปลงการเลือกพนักงาน
-                document.getElementById('fiscalYearForm').submit();
-            });
-
-            // 🛠 เพิ่มระบบ Select2 แบบ Multiple Select สำหรับตารางเปรียบเทียบข้อมูลโดยเฉพาะ
-            $('#matrix_sales_persons').select2({
-                placeholder: "👥 พนักงานทุกคน",
-                allowClear: true
-            }).on('change select2:select select2:unselect', function() {
-                document.getElementById('matrixFilterForm').submit();
-            });
-        }
-
         // -------------------------------------------------------------
         // 1. กราฟเดิม: รายได้แยกตามคอร์สเรียน (Course Revenue Chart)
         // -------------------------------------------------------------
@@ -462,7 +309,7 @@
         // -------------------------------------------------------------
         var ctxMonthly = document.getElementById('monthlySalesChart');
         if(ctxMonthly) {
-            var dataRevenue = @json($chartData);
+            var dataRevenue = @json($chartData ?? array_fill(0, 12, 0));
 
             new Chart(ctxMonthly.getContext('2d'), {
                 type: 'bar', 
@@ -519,7 +366,7 @@
         }
 
         // -------------------------------------------------------------
-        // 📊 ฟังก์ชันกลางสำหรับสร้างกราฟแท่งแบบมินิ (คอร์สเรียนรายสถานะ)
+        // 3. ฟังก์ชันกลางสำหรับสร้างกราฟแท่งแบบมินิ (คอร์สเรียนรายสถานะ)
         // -------------------------------------------------------------
         function createMiniCourseChart(canvasId, labels, data, baseColor, labelText) {
             var ctx = document.getElementById(canvasId);
@@ -579,15 +426,15 @@
 
         // แปลงข้อมูลจาก PHP Array ส่งไปยัง JavaScript เพื่อประมวลผลวาดกราฟคอร์สเรียนทั้ง 3 รูปแบบ
         var closedLabels = @json(collect($closedSaleCourses ?? [])->map(fn($item) => $item->course->course_name ?? 'ไม่ระบุ')->values());
-        var closedValues = @json(collect($closedSaleCourses ?? [])->map(fn($item) => (float)$item->total_revenue_sum)->values());
+        var closedValues = @json(collect($closedSaleCourses ?? [])->map(fn($item) => (float)($item->total_revenue_sum ?? 0))->values());
         createMiniCourseChart('closedCoursesChart', closedLabels, closedValues, 'rgba(16, 185, 129, 1)', 'ยอดรวมสุทธิ');
 
         var followingLabels = @json(collect($followingCourses ?? [])->map(fn($item) => $item->course->course_name ?? 'ไม่ระบุ')->values());
-        var followingValues = @json(collect($followingCourses ?? [])->map(fn($item) => (float)$item->total_revenue_sum)->values());
+        var followingValues = @json(collect($followingCourses ?? [])->map(fn($item) => (float)($item->total_revenue_sum ?? 0))->values());
         createMiniCourseChart('followingCoursesChart', followingLabels, followingValues, 'rgba(59, 130, 246, 1)', 'ยอดคาดการณ์');
 
         var forecastLabels = @json(collect($forecastCourses ?? [])->map(fn($item) => $item->course->course_name ?? 'ไม่ระบุ')->values());
-        var forecastValues = @json(collect($forecastCourses ?? [])->map(fn($item) => (float)$item->total_revenue_sum)->values());
+        var forecastValues = @json(collect($forecastCourses ?? [])->map(fn($item) => (float)($item->total_revenue_sum ?? 0))->values());
         createMiniCourseChart('forecastCoursesChart', forecastLabels, forecastValues, 'rgba(245, 158, 11, 1)', 'ยอดประมาณการ');
     });
 </script>

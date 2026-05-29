@@ -9,6 +9,22 @@
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
 
+    @php
+        // คำนวณแจ้งเตือนสำหรับ Sidebar
+        $sidebarPendingCount = 0;
+        if(auth()->check()) {
+            $isGlobalAdmin = auth()->user()->isAdmin() || auth()->user()->isManager();
+            $globalUserId = auth()->id();
+            
+            // ใช้ DB::table เพื่อป้องกัน Error deleted_at
+            $sidebarPendingCount = \Illuminate\Support\Facades\DB::table('sales_deals')
+                ->whereIn('status', ['Following', 'Forecast'])
+                ->when(!$isGlobalAdmin, function($q) use ($globalUserId) {
+                    $q->where('user_id', $globalUserId);
+                })->count();
+        }
+    @endphp
+
     <div class="flex h-screen overflow-hidden">
         
         <div class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0">
@@ -32,11 +48,25 @@
                 </a>
                 @endif
 
+                @if(auth()->check())
+                <a href="{{ url('/dashboard/sales') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-colors {{ Request::is('dashboard/sales*') ? 'bg-slate-800 text-white' : '' }}">
+                    <i class="fa-solid fa-chart-pie mr-3 w-5 text-center text-slate-400"></i> แดชบอร์ดส่วนบุคคล
+                </a>
+                @endif
+
                 <a href="{{ route('customers.index') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-colors {{ Request::is('customers*') ? 'bg-slate-800 text-white' : '' }}">
                     <i class="fa-solid fa-building mr-3 w-5 text-center text-slate-400"></i> ข้อมูลลูกค้า / บริษัท
                 </a>
-                <a href="{{ route('deals.index') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-colors {{ Request::is('deals*') ? 'bg-slate-800 text-white' : '' }}">
-                    <i class="fa-solid fa-handshake mr-3 w-5 text-center text-slate-400"></i> บันทึกงานขาย (Deals)
+                
+                <a href="{{ route('deals.index') }}" class="flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-colors {{ Request::is('deals*') ? 'bg-slate-800 text-white' : '' }}">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-handshake mr-3 w-5 text-center text-slate-400"></i> บันทึกงานขาย (Deals)
+                    </div>
+                    @if($sidebarPendingCount > 0)
+                        <span class="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm shadow-rose-500/50">
+                            {{ $sidebarPendingCount }}
+                        </span>
+                    @endif
                 </a>
                 
                 @if(auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isManager()))

@@ -10,7 +10,7 @@
             <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium">ข้อมูลการขายหลัก</span>
             <div class="flex items-center gap-2">
                 <a href="{{ route('deals.quotation', $deal->id) }}" target="_blank" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">
-                    🖨️ พิมพ์ใบเสนอราคา
+                    🖨️ พิมพ์ใบสรุปยอดขาย
                 </a>
                 <a href="{{ route('sales_deals.index') }}" class="text-sm text-slate-500 hover:text-slate-800">⬅️ กลับหน้าตารางรวม</a>
             </div>

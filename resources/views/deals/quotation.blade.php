@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ใบเสนอราคา - {{ $deal->customer->company_name }}</title>
+    <title>ใบสรุปยอดขาย - {{ $deal->customer->company_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -20,13 +20,13 @@
     <div class="no-print max-w-4xl mx-auto mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <p class="text-sm text-slate-500 font-medium">มุมมองตัวอย่างใบเสนอราคา (A4 Layout)</p>
+            <p class="text-sm text-slate-500 font-medium">มุมมองตัวอย่างใบสรุปยอดขายภายใน (Internal Sales Summary)</p>
         </div>
         <div class="flex gap-2">
-            <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition-all flex items-center gap-1.5">
+            <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow transition-all flex items-center gap-1.5 cursor-pointer">
                 🖨️ สั่งพิมพ์ / บันทึกเป็น PDF
             </button>
-            <button onclick="window.close()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+            <button onclick="window.close()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer">
                 ปิดหน้านี้
             </button>
         </div>
@@ -43,18 +43,18 @@
                 </p>
             </div>
             <div class="text-right">
-                <h2 class="text-2xl font-bold text-indigo-600 tracking-wide uppercase">ใบเสนอราคา</h2>
-                <span class="text-xs font-semibold text-slate-400 block tracking-widest mt-0.5 uppercase">QUOTATION</span>
+                <h2 class="text-2xl font-bold text-emerald-600 tracking-wide uppercase">ใบสรุปยอดขาย</h2>
+                <span class="text-xs font-semibold text-slate-400 block tracking-widest mt-0.5 uppercase">SALES SUMMARY</span>
                 <div class="text-xs text-slate-600 mt-3 space-y-0.5">
-                    <p><span class="font-bold">เลขที่เอกสาร:</span> QT-{{ str_pad($deal->id, 5, '0', STR_PAD_LEFT) }}</p>
-                    <p><span class="font-bold">วันที่:</span> {{ \Carbon\Carbon::parse($deal->deal_date)->format('d/m/Y') }}</p>
+                    <p><span class="font-bold">เลขที่รายการขาย:</span> SS-{{ str_pad($deal->id, 5, '0', STR_PAD_LEFT) }}</p>
+                    <p><span class="font-bold">วันที่บันทึก:</span> {{ \Carbon\Carbon::parse($deal->deal_date)->format('d/m/Y') }}</p>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-lg border border-slate-100 mb-8">
             <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">ลูกค้าผู้รับการเสนอราคา / Customer</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">ข้อมูลลูกค้าและบริษัท / Customer Info</span>
                 <h3 class="text-base font-bold text-slate-800">{{ $deal->customer->company_name }}</h3>
                 <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                     หมวดหมู่ธุรกิจ: {{ $deal->category ?? 'ทั่วไป' }}<br>
@@ -98,7 +98,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-400 italic">ไม่มีรายการดีลคอร์สเรียนย่อยในเอกสารฉบับนี้</td>
+                            <td colspan="6" class="p-8 text-center text-slate-400 italic">ไม่มีรายการขายคอร์สเรียนย่อยในเอกสารฉบับนี้</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -107,9 +107,9 @@
 
         <div class="flex justify-between items-start gap-4 mb-16">
             <div class="w-1/2 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">เงื่อนไขการชำระเงินและหมายเหตุ / Terms</span>
+                <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">หมายเหตุและข้อตกลงภายใน / Internal Notes</span>
                 <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                    1. ใบเสนอราคานี้มีผลบังคับใช้เป็นเวลา 30 วันนับจากวันที่ออกเอกสาร<br>
+                    1. เอกสารฉบับนี้ใช้สำหรับสรุปยอดงานขายภายในแผนกขายเท่านั้น ห้ามใช้อ้างอิงภายนอกองค์กร<br>
                     2. โปรโมชั่นและส่วนลดพิเศษ: {{ $deal->promotion ?? 'ไม่มีโปรโมชั่นเงื่อนไขเพิ่มเติม' }}<br>
                     @if($deal->note) 3. โน้ตเพิ่มเติม: {{ $deal->note }} @endif
                 </p>
@@ -126,7 +126,7 @@
                     </div>
                     <div class="flex justify-between text-base font-black text-slate-900 border-t-2 border-slate-200 pt-2 mt-2">
                         <span>ยอดรวมทั้งสิ้น / Grand Total:</span>
-                        <span class="text-indigo-600">฿{{ number_format($grandTotal, 2) }}</span>
+                        <span class="text-emerald-600">฿{{ number_format($grandTotal, 2) }}</span>
                     </div>
                 </div>
             </div>
@@ -134,11 +134,11 @@
 
         <div class="grid grid-cols-2 gap-12 text-xs pt-8 border-t border-dashed border-slate-200">
             <div class="text-center">
-                <p class="text-slate-400 mb-16">ลงชื่อ..........................................................<br>ผู้เสนอราคา / Prepared By</p>
+                <p class="text-slate-400 mb-16">ลงชื่อ..........................................................<br>เจ้าหน้าที่ผู้บันทึก / Sales Representative</p>
                 <p class="font-bold text-slate-700">วันที่ ......../......../........</p>
             </div>
             <div class="text-center">
-                <p class="text-slate-400 mb-16">ลงชื่อ..........................................................<br>ผู้รับข้อเสนอ (ลูกค้า) / Accepted By</p>
+                <p class="text-slate-400 mb-16">ลงชื่อ..........................................................<br>ผู้ตรวจสอบแผนกขาย / Verified By</p>
                 <p class="font-bold text-slate-700">วันที่ ......../......../........</p>
             </div>
         </div>

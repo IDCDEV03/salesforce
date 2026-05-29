@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page_title', 'บันทึกดีลงานขายใหม่')
+@section('page_title', 'บันทึกการขายงานใหม่')
 
 @section('content')
 <div class="max-w-3xl mx-auto space-y-6">
@@ -13,8 +13,8 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-6 border-b border-gray-100 bg-slate-50">
-            <h3 class="text-base font-bold text-gray-800">สร้างหัวดีลใหม่ (Deal Information)</h3>
-            <p class="text-gray-500 text-xs mt-1">กรอกข้อมูลบริษัทลูกค้าและสถานะของดีล (สามารถเพิ่มคอร์สและสินค้าได้ในขั้นตอนถัดไป)</p>
+            <h3 class="text-base font-bold text-gray-800">สร้างการขายใหม่ (Deal Information)</h3>
+            <p class="text-gray-500 text-xs mt-1">กรอกข้อมูลบริษัทลูกค้าและสถานะการขาย (สามารถเพิ่มคอร์สและสินค้าได้ในขั้นตอนถัดไป)</p>
         </div>
 
         @if ($errors->any())
@@ -44,14 +44,14 @@
                 </div>
 
                 <div>
-                    <label for="deal_date" class="block text-sm font-medium text-gray-700 mb-1">วันที่บันทึกดีล <span class="text-rose-500">*</span></label>
+                    <label for="deal_date" class="block text-sm font-medium text-gray-700 mb-1">วันที่บันทึกการขาย <span class="text-rose-500">*</span></label>
                     <input type="date" name="deal_date" id="deal_date" required value="{{ old('deal_date', date('Y-m-d')) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">สถานะดีล (Status) <span class="text-rose-500">*</span></label>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">สถานะการขาย (Status) <span class="text-rose-500">*</span></label>
                     <select name="status" id="status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white">
                         <option value="Forecast" {{ old('status') == 'Forecast' ? 'selected' : '' }}>Forecast (ประมาณการยอดขาย)</option>
                         <option value="Following" {{ old('status') == 'Following' ? 'selected' : '' }}>Following (กำลังติดตามงาน)</option>
@@ -117,7 +117,7 @@
 
             <div>
                 <label for="updated_note" class="block text-sm font-medium text-gray-700 mb-1">บันทึกเพิ่มเติม (Up-dated Noted)</label>
-                <textarea name="updated_note" id="updated_note" rows="3" placeholder="พิมพ์หมายเหตุ ความคืบหน้า หรือรายละเอียดเพิ่มเติมเกี่ยวกับการคุยดีลนี้..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">{{ old('updated_note') }}</textarea>
+                <textarea name="updated_note" id="updated_note" rows="3" placeholder="พิมพ์หมายเหตุ ความคืบหน้า หรือรายละเอียดเพิ่มเติมเกี่ยวกับการขายนี้..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">{{ old('updated_note') }}</textarea>
             </div>
 
             <div class="pt-4 border-t border-gray-100 flex justify-end gap-3">

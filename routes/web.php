@@ -37,6 +37,15 @@ Route::middleware(['auth'])->group(function () {
     // หน้าแรกของเว็บ: ระบบแดชบอร์ดสรุปผล (โมดูล 3)
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // ➕ ส่วนที่เพิ่มใหม่: Route API สำหรับดึงข้อมูลกราฟเปรียบเทียบผลงานฝ่ายขายแบบ Real-time
+    Route::get('/dashboard/api/sales-comparison', [DashboardController::class, 'salesComparisonApi'])->name('dashboard.api.sales-comparison');
+
+    // ➕ ส่วนที่เพิ่มใหม่: หน้าแดชบอร์ดข้อมูลส่วนตัวสำหรับพนักงานขาย (User Sales Dashboard)
+    Route::get('/sales/dashboard', [DashboardController::class, 'salesDashboard'])->name('sales.dashboard');
+
+    // ➕ ส่วนที่แก้ไข: หน้าแดชบอร์ดส่วนบุคคล (ปรับมาดึงข้อมูลการคำนวณผ่านฟังก์ชันของ DashboardController)
+    Route::get('/dashboard/sales', [DashboardController::class, 'salesDashboard'])->name('dashboard.sales');
+
     // หน้าจัดการข้อมูลลูกค้า (โมดูล 1)
     Route::resource('customers', CustomerController::class);
 

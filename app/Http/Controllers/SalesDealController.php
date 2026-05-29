@@ -26,9 +26,11 @@ class SalesDealController extends Controller
         // ดึงข้อมูลดีลพร้อมข้อมูลลูกค้าและสินค้าที่เชื่อมโยงกัน
         $query = SalesDeal::with(['customer', 'dealItems.course']);
 
-        // 🔒 ระบบล็อกสิทธิ์คัดแยกมุมมองข้อมูลดีลงานขาย
-        if (Auth::check() && Auth::user()->isAdmin()) {
-            // สิทธิ์ Admin: ถ้าเลือกพนักงานจากกล่อง Dropdown ให้กรองเฉพาะดีลของพนักงานคนนั้น ถ้าไม่มีเลือกให้แสดงทั้งหมด
+        // 🔒 ระบบล็อกสิทธิ์คัดแยกมุมมองข้อมูลดีลงานขาย (อัปเดตเพิ่มสิทธิ์ให้ Manager เห็นเหมือน Admin)
+        $isUserAdminOrManager = Auth::check() && (Auth::user()->isAdmin() || strtolower(Auth::user()->role) === 'manager');
+
+        if ($isUserAdminOrManager) {
+            // สิทธิ์ Admin และ Manager: ถ้าเลือกพนักงานจากกล่อง Dropdown ให้กรองเฉพาะดีลของพนักงานคนนั้น ถ้าไม่มีเลือกให้แสดงทั้งหมด
             if ($request->filled('sales_person_id')) {
                 $query->where('user_id', $selectedSalesPerson);
             }
@@ -54,11 +56,25 @@ class SalesDealController extends Controller
             ->latest()
             ->paginate(15);
 
-        // ดึงรายชื่อพนักงานทั้งหมดส่งไปให้ Admin เลือกกรองในหน้า View
+        // ดึงรายชื่อพนักงานทั้งหมดส่งไปให้ Admin และ Manager เลือกกรองในหน้า View
         $salesPersons = User::all();
 
-        // 🟢 ส่งค่า selectedMonth และ selectedYear กลับไปแสดงผลที่ View
-        return view('deals.index', compact('deals', 'status', 'salesPersons', 'selectedSalesPerson', 'selectedMonth', 'selectedYear'));
+        // 🔔 เช็คงานค้าง (Following, Forecast) ของผู้ใช้งานปัจจุบัน หรือของทุกคนกรณีเป็น Admin/Manager เพื่อนำไปทำแจ้งเตือน
+        // โดยใช้เงื่อนไขตรวจสอบ status รูปแบบตัวอักษรเล็ก/ใหญ่ให้ครอบคลุม
+        $pendingDealsCount = 0;
+        if (Auth::check()) {
+            $pendingQuery = SalesDeal::whereIn('status', ['following', 'Following', 'forecast', 'Forecast']);
+            
+            // ถ้าไม่ใช่ Admin หรือ Manager ให้คัดกรองเฉพาะงานของตัวเอง
+            if (!$isUserAdminOrManager) {
+                $pendingQuery->where('user_id', Auth::id());
+            }
+            
+            $pendingDealsCount = $pendingQuery->count();
+        }
+
+        // 🟢 ส่งค่าทั้งหมด (รวมถึง $pendingDealsCount) กลับไปแสดงผลที่ View
+        return view('deals.index', compact('deals', 'status', 'salesPersons', 'selectedSalesPerson', 'selectedMonth', 'selectedYear', 'pendingDealsCount'));
     }
 
     // หน้าฟอร์มสร้างดีลงานขายใหม่
